@@ -107,6 +107,9 @@ jobs:
     timeout-minutes: 45
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
@@ -130,22 +133,4 @@ jobs:
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
-          script: |
-            set -eu
-            adb wait-for-device
-            apk="$(find "$GITHUB_WORKSPACE/artifact" -type f -name 'app-debug.apk' | head -n 1)"
-            if [ -z "$apk" ]; then
-              echo "Debug APK not found in downloaded artifact" >&2
-              find "$GITHUB_WORKSPACE/artifact" -maxdepth 4 -type f -print || true
-              exit 1
-            fi
-            adb install -r "$apk"
-            adb shell am start -n com.elvan.netband/.MainActivity
-            sleep 5
-            pid="$(adb shell pidof com.elvan.netband)"
-            if [ -z "$pid" ]; then
-              echo "NetBand process did not start" >&2
-              adb logcat -d -t 200
-              exit 1
-            fi
-            echo "NetBand started with pid $pid"
+          script: bash .github/scripts/emulator-smoke.sh
