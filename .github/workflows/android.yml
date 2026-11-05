@@ -131,13 +131,14 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
+            adb wait-for-device
             apk="$(find "$GITHUB_WORKSPACE/artifact" -type f -name 'app-debug.apk' | head -n 1)"
             if [ -z "$apk" ]; then
               echo "Debug APK not found in downloaded artifact" >&2
+              find "$GITHUB_WORKSPACE/artifact" -maxdepth 4 -type f -print || true
               exit 1
             fi
-            adb wait-for-device
             adb install -r "$apk"
             adb shell am start -n com.elvan.netband/.MainActivity
             sleep 5
