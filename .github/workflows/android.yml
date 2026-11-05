@@ -57,6 +57,7 @@ jobs:
             echo "sdkmanager not found at $sdkmanager_path" >&2
             exit 1
           fi
+          set +e
           yes | "$sdkmanager_path" \
             "platforms;android-34" \
             "build-tools;34.0.0" \
@@ -64,6 +65,12 @@ jobs:
             "cmake;3.22.1" \
             "platform-tools" \
             "emulator"
+          install_status="${PIPESTATUS[1]}"
+          set -e
+          if [ "$install_status" -ne 0 ]; then
+            echo "sdkmanager failed with exit code ${install_status}" >&2
+            exit "$install_status"
+          fi
 
       - name: Show toolchain versions
         shell: bash
