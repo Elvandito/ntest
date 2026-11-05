@@ -72,7 +72,7 @@ private fun NetBandApp(vm: NetBandViewModel, onQuit: () -> Unit) {
                 .height(58.dp)
                 .background(NetBandColors.Surface)
         ) {
-            Box(Modifier.fillMaxWidth().height(1.dp).background(NetBandColors.Border))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(NetBandColors.Rule))
             Row(Modifier.fillMaxSize()) {
                 DestinationIcon("hosts", selectedTab, Icons.Filled.Devices, "Hosts") { selectedTab = it }
                 DestinationIcon("monitor", selectedTab, Icons.Filled.Monitor, "Monitor") { selectedTab = it }
@@ -99,7 +99,7 @@ private fun RowScope.DestinationIcon(
             .clickable { onSelect(id) },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(Modifier.fillMaxWidth(0.5f).height(1.dp).background(if (selected) NetBandColors.Accent else Color.Transparent))
+        Box(Modifier.fillMaxWidth(0.5f).height(1.dp).background(if (selected) NetBandColors.Amber else Color.Transparent))
         Column(Modifier.fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(icon, contentDescription = label, tint = if (selected) NetBandColors.Text else NetBandColors.Muted, modifier = Modifier.size(20.dp))
             Spacer(Modifier.height(3.dp))

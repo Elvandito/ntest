@@ -1,7 +1,6 @@
 package com.elvan.netband.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,42 +31,39 @@ fun WatchScreen(vm: NetBandViewModel) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(NetBandColors.Ground)
+            .background(NetBandColors.Paper)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = 16.dp, vertical = 18.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             NetBandMark()
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text("Watch", color = NetBandColors.Text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, fontFamily = PublicSans)
-                Text("${watched.size} host${if (watched.size == 1) "" else "s"} on IP-change watch", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans)
+                Text("Watch", color = NetBandColors.Ink, fontSize = 23.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
+                Text("IP-change trail · by MAC", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans)
             }
         }
 
-        StatusLine("Watch catches IP renewal and laptop/DHCP churn by MAC address. Root is not required for this list.", Modifier.padding(top = 8.dp))
+        Readout("On watch", watched.size.toString(), "hosts", Modifier.padding(top = 20.dp), NetBandColors.Amber)
+        StatusLine("Catches DHCP renewal and device moves. It does not run a background service; changes appear after a scan.", Modifier.padding(top = 6.dp))
 
-        SectionHeader("IP-change watch")
+        SectionHeader("Watched hosts")
         Panel(Modifier.fillMaxWidth()) {
-            Text("Check interval", color = NetBandColors.Text, fontSize = 13.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
-            Text("Scan interval used by manual refresh; Android does not run a background daemon.", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 2.dp))
-            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Check interval", color = NetBandColors.Ink, fontSize = 13.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
+            Text("Manual; Android does not wake on ARP changes.", color = NetBandColors.Muted, fontSize = 11.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 3.dp))
+            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(1_000L to "1s", 5_000L to "5s", 10_000L to "10s", 30_000L to "30s").forEach { (value, label) ->
-                    val selected = state.watchIntervalMs == value
-                    Column(Modifier.clickable { vm.setWatchSettings(value, state.watchWindowSeconds) }.padding(vertical = 2.dp)) {
-                        Text(label, color = if (selected) NetBandColors.Text else NetBandColors.Muted, fontFamily = IbmPlexMono, fontSize = 12.sp)
-                        Box(Modifier.padding(top = 3.dp).height(1.dp).fillMaxWidth().background(if (selected) NetBandColors.Accent else androidx.compose.ui.graphics.Color.Transparent))
-                    }
+                    SelectChip(label = label, selected = state.watchIntervalMs == value, onClick = { vm.setWatchSettings(value, state.watchWindowSeconds) })
                 }
             }
-            HorizontalRule(Modifier.padding(vertical = 12.dp))
-            Text("History window", color = NetBandColors.Text, fontSize = 13.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
-            Text("Seconds retained for watch events before they rotate out.", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 2.dp))
+            HorizontalRule(Modifier.padding(vertical = 14.dp))
+            Text("History window", color = NetBandColors.Ink, fontSize = 13.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
+            Text("Seconds kept in the in-app trail.", color = NetBandColors.Muted, fontSize = 11.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 3.dp))
             Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = windowText,
                     onValueChange = { windowText = it },
-                    modifier = Modifier.width(110.dp),
+                    modifier = Modifier.width(120.dp),
                     label = { Text("Seconds") },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = IbmPlexMono, fontSize = 13.sp)
@@ -75,7 +71,7 @@ fun WatchScreen(vm: NetBandViewModel) {
                 Spacer(Modifier.width(8.dp))
                 MonoButton("Save", {
                     windowText.toLongOrNull()?.let { vm.setWatchSettings(state.watchIntervalMs, it) }
-                }, Modifier.width(86.dp))
+                }, Modifier.width(88.dp))
             }
         }
 
@@ -88,27 +84,26 @@ fun WatchScreen(vm: NetBandViewModel) {
         SectionHeader("Watched hosts · ${watched.size}")
         if (watched.isEmpty()) {
             Panel(Modifier.fillMaxWidth()) {
-                Text("No watch entries", color = NetBandColors.Text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = PublicSans)
-                Text("Choose hosts on the Hosts tab, then add them to watch to catch an IP change after DHCP renewal.", color = NetBandColors.Muted, fontSize = 13.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 6.dp))
+                Text("No watch entries", color = NetBandColors.Ink, fontSize = 16.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
+                Text("Add a host on Hosts. The trail starts the next time you scan and its MAC reappears at a different address.", color = NetBandColors.Muted, fontSize = 13.sp, lineHeight = 18.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 5.dp))
             }
         } else {
             Panel(Modifier.fillMaxWidth()) {
                 watched.forEachIndexed { index, device ->
                     WatchedRow(device, onRemove = { vm.toggleWatch(device) })
-                    if (index < watched.lastIndex) HorizontalRule(Modifier.padding(vertical = 0.dp))
+                    if (index < watched.lastIndex) HorizontalRule()
                 }
             }
         }
 
-        SectionHeader("IP changes · ${state.watchEvents.size}")
+        SectionHeader("IP-change trail")
         Panel(Modifier.fillMaxWidth()) {
             if (state.watchEvents.isEmpty()) {
-                Text("—", color = NetBandColors.Muted, fontFamily = IbmPlexMono, fontSize = 14.sp)
-                Text("No IP changes observed since app launch.", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 4.dp))
+                Text("—", color = NetBandColors.Muted, fontFamily = IbmPlexMono, fontSize = 16.sp)
+                Text("No address changes observed since launch.", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 5.dp))
             } else {
-                state.watchEvents.forEachIndexed { index, event ->
-                    Text(event, color = NetBandColors.Text, fontFamily = IbmPlexMono, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    if (index < state.watchEvents.lastIndex) HorizontalRule(Modifier.padding(vertical = 8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    state.watchEvents.forEach { event -> TrailRow(event) }
                 }
             }
         }
@@ -119,15 +114,24 @@ fun WatchScreen(vm: NetBandViewModel) {
 
 @Composable
 private fun WatchedRow(device: Device, onRemove: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 68.dp).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(device.ip, color = NetBandColors.Text, fontFamily = IbmPlexMono, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text("#${device.id.toString().padStart(2, '0')} · ${device.mac}", color = NetBandColors.Muted, fontFamily = IbmPlexMono, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
-            Text(deviceStatus(device), color = NetBandColors.Muted, fontFamily = PublicSans, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+            Text(device.ip, color = NetBandColors.Ink, fontFamily = IbmPlexMono, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+            Text("#${device.id.toString().padStart(2, '0')}  ·  ${device.mac}", color = NetBandColors.Muted, fontFamily = IbmPlexMono, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+            Text(deviceStatus(device), color = if (device.limitRate != null || device.blocked) NetBandColors.Amber else NetBandColors.Cool, fontFamily = PublicSans, fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
         }
-        IconButton(onClick = onRemove, modifier = Modifier.size(38.dp)) {
-            Icon(Icons.Filled.VisibilityOff, contentDescription = "Remove ${device.ip} from watch", tint = NetBandColors.Text, modifier = Modifier.size(18.dp))
+        IconButton(onClick = onRemove, modifier = Modifier.size(44.dp)) {
+            Icon(Icons.Filled.VisibilityOff, contentDescription = "Remove ${device.ip} from watch", tint = NetBandColors.Ink2, modifier = Modifier.size(19.dp))
         }
+    }
+}
+
+@Composable
+private fun TrailRow(event: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Box(Modifier.width(1.dp).height(22.dp).background(NetBandColors.Rule2))
+        Spacer(Modifier.width(10.dp))
+        Text(event, color = NetBandColors.Ink2, fontFamily = IbmPlexMono, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
     }
 }
 

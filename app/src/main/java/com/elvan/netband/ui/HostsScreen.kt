@@ -1,20 +1,18 @@
 package com.elvan.netband.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -27,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,8 +35,7 @@ import com.elvan.netband.Device
 import com.elvan.netband.Direction
 import com.elvan.netband.NetBandViewModel
 import com.elvan.netband.UiState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.painter.Painter
 
 private enum class HostFilter(val label: String) {
     ALL("All"), ONLINE("Online"), LIMITED("Limited"), BLOCKED("Blocked"), WATCHED("Watched")
@@ -73,33 +71,51 @@ fun HostsScreen(vm: NetBandViewModel) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(NetBandColors.Ground)
+            .background(NetBandColors.Paper)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = 16.dp, vertical = 18.dp)
     ) {
-        HeaderRow(
-            state = state,
-            onScan = { vm.scan() },
-            onAdd = { showAdd = true },
-            scanning = state.scanning
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            NetBandMark()
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("NetBand", color = NetBandColors.Ink, fontSize = 23.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
+                Text(if (state.hasRoot) "root shell ready" else "scan-only mode", color = if (state.hasRoot) NetBandColors.Amber else NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans)
+            }
+            OutlinedIconButton(onClick = { showAdd = true }, contentDescription = "Add host") {
+                Icon(Icons.Filled.Add, contentDescription = null, tint = NetBandColors.Ink, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(8.dp))
+            PrimaryButton(if (state.scanning) "Scanning…" else "Scan", { vm.scan() }, enabled = !state.scanning)
+        }
 
-        StatusLine(formatConnection(state.netInfo?.iface, state.netInfo?.localIp, state.netInfo?.gatewayIp), Modifier.padding(top = 6.dp))
-        if (!state.hasRoot) StatusLine("Root unavailable — scan and add-host work; limit/block need root.", Modifier.padding(top = 2.dp))
+        StatusLine(formatConnection(state.netInfo?.iface, state.netInfo?.localIp, state.netInfo?.gatewayIp), Modifier.padding(top = 12.dp))
+        if (!state.hasRoot) StatusLine("Root is required to limit or block; scan and manual add still work.", Modifier.padding(top = 2.dp))
         if (state.message.isNotBlank()) StatusLine(state.message, Modifier.padding(top = 2.dp))
 
-        ScanRangeBar(state = state, vm = vm, onScan = { vm.scan() })
+        NetworkReadout(state)
 
-        KpiGrid(state)
+        OutlinedTextField(
+            value = state.scanRange,
+            onValueChange = vm::setScanRange,
+            modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+            label = { Text("Scan range (optional)") },
+            placeholder = { Text("192.168.1.10-192.168.1.80") },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = IbmPlexMono, fontSize = 13.sp),
+            shape = MaterialTheme.shapes.small
+        )
 
-        FilterTabs(query = query, onQueryChange = { query = it }, filter = filter, onFilterChange = { filter = it })
+        SearchAndFilters(query = query, onQueryChange = { query = it }, filter = filter, onFilterChange = { filter = it })
 
-        SectionHeader(title = "Hosts · ${filtered.size}/${state.devices.size}") {
-            TextButton(onClick = { vm.freeAll() }) { Text("Free all", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = IbmPlexMono) }
+        SectionHeader("Hosts · ${filtered.size} of ${state.devices.size}") {
+            TextButton(onClick = { vm.freeAll() }, modifier = Modifier.height(44.dp)) {
+                Text("Free all", color = NetBandColors.Ink2, fontSize = 13.sp, fontFamily = PublicSans)
+            }
         }
 
         if (filtered.isEmpty()) {
-            EmptyHosts(query = query, onClear = { query = ""; filter = HostFilter.ALL })
+            EmptyHosts(query = query, onClear = { query = ""; filter = HostFilter.ALL }, onAdd = { showAdd = true })
         } else {
             Panel(Modifier.fillMaxWidth()) {
                 filtered.forEachIndexed { index, device ->
@@ -116,7 +132,7 @@ fun HostsScreen(vm: NetBandViewModel) {
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(28.dp))
     }
 
     if (showAdd) AddHostDialog(onDismiss = { showAdd = false }, onAdd = { ip, mac -> vm.addHost(ip, mac); showAdd = false })
@@ -124,7 +140,7 @@ fun HostsScreen(vm: NetBandViewModel) {
         DeviceDetailDialog(
             device = device,
             state = state,
-            onDismiss = { selected = null; vm.refreshMonitor() },
+            onDismiss = { selected = null },
             onLimit = { showLimit = device },
             onBlock = { showBlock = device },
             onFree = { vm.free(device) },
@@ -137,80 +153,56 @@ fun HostsScreen(vm: NetBandViewModel) {
 }
 
 @Composable
-private fun HeaderRow(state: UiState, onScan: () -> Unit, onAdd: () -> Unit, scanning: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        NetBandMark()
-        Spacer(Modifier.width(10.dp))
-        Column(Modifier.weight(1f)) {
-            Text("NetBand", color = NetBandColors.Text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, fontFamily = PublicSans)
-            Text(if (state.hasRoot) "Root shell ready" else "Scan-only mode", color = if (state.hasRoot) NetBandColors.Positive else NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans)
-        }
-        OutlinedIconButton(onClick = onAdd, contentDescription = "Add host") { Icon(Icons.Filled.Add, contentDescription = null, tint = NetBandColors.Text) }
-        Spacer(Modifier.width(8.dp))
-        PrimaryButton(if (scanning) "Scanning…" else "Scan", onScan, enabled = !scanning)
-    }
-}
-
-@Composable
-private fun ScanRangeBar(state: UiState, vm: NetBandViewModel, onScan: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = state.scanRange,
-            onValueChange = vm::setScanRange,
-            modifier = Modifier.weight(1f),
-            label = { Text("Range (optional)") },
-            placeholder = { Text("192.168.1.10-192.168.1.80") },
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = IbmPlexMono, fontSize = 13.sp),
-            shape = MaterialTheme.shapes.extraSmall
-        )
-        Spacer(Modifier.width(8.dp))
-        OutlinedIconButton(onClick = onScan, contentDescription = "Scan range", enabled = !state.scanning) {
-            Icon(Icons.Filled.Refresh, contentDescription = null, tint = NetBandColors.Text)
-        }
-    }
-}
-
-@Composable
-private fun KpiGrid(state: UiState) {
+private fun NetworkReadout(state: UiState) {
     val online = state.devices.count { it.online }
     val limited = state.devices.count { it.limitRate != null }
     val blocked = state.devices.count { it.blocked }
     val watched = state.devices.count { it.watched }
-    Panel(Modifier.fillMaxWidth().padding(top = 10.dp), content = {
-        Column {
-            Row(Modifier.fillMaxWidth()) {
-                StatCell("Online", online.toString(), "hosts", Modifier.weight(1f))
-                VerticalRule()
-                StatCell("Limited", limited.toString(), "hosts", Modifier.weight(1f))
-            }
-            HorizontalRule()
-            Row(Modifier.fillMaxWidth()) {
-                StatCell("Blocked", blocked.toString(), "hosts", Modifier.weight(1f))
-                VerticalRule()
-                StatCell("Watched", watched.toString(), "hosts", Modifier.weight(1f))
+    Panel(Modifier.fillMaxWidth().padding(top = 14.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            Readout("Hosts online", online.toString(), "of ${state.devices.size}", Modifier.weight(1.35f), NetBandColors.Cool)
+            VerticalRule()
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                MiniReading("Limited", limited.toString(), NetBandColors.Amber)
+                MiniReading("Blocked", blocked.toString(), NetBandColors.Bad)
+                MiniReading("Watched", watched.toString(), NetBandColors.Muted)
             }
         }
-    })
+    }
 }
 
 @Composable
-private fun FilterTabs(query: String, onQueryChange: (String) -> Unit, filter: HostFilter, onFilterChange: (HostFilter) -> Unit) {
+private fun MiniReading(label: String, value: String, tint: Color) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(value, color = tint, fontFamily = IbmPlexMono, fontSize = 23.sp, fontWeight = FontWeight.Medium, modifier = Modifier.width(38.dp))
+        Text(label, color = NetBandColors.Muted, fontFamily = PublicSans, fontSize = 12.sp)
+    }
+}
+
+@Composable
+private fun SearchAndFilters(query: String, onQueryChange: (String) -> Unit, filter: HostFilter, onFilterChange: (HostFilter) -> Unit) {
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-        label = { Text("Search ID, IP, MAC, hostname") },
+        modifier = Modifier.fillMaxWidth().padding(top = 18.dp),
+        label = { Text("Search host") },
+        placeholder = { Text("IP, MAC, ID or hostname") },
         singleLine = true,
         textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = IbmPlexMono, fontSize = 13.sp),
-        shape = MaterialTheme.shapes.extraSmall
+        shape = MaterialTheme.shapes.small
     )
-    Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+
+    Row(
+        Modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(top = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
         HostFilter.entries.forEach { option ->
             val selected = option == filter
-            Column(Modifier.clickable { onFilterChange(option) }.padding(vertical = 4.dp)) {
-                Text(option.label, color = if (selected) NetBandColors.Text else NetBandColors.Muted, fontFamily = PublicSans, fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                Box(Modifier.padding(top = 3.dp).height(1.dp).fillMaxWidth().background(if (selected) NetBandColors.Accent else Color.Transparent))
+            Column(Modifier.widthIn(min = 52.dp).clickable { onFilterChange(option) }.padding(vertical = 5.dp)) {
+                Text(option.label, color = if (selected) NetBandColors.Ink else NetBandColors.Muted, fontFamily = PublicSans, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                Box(Modifier.padding(top = 4.dp).height(1.dp).fillMaxWidth().background(if (selected) NetBandColors.Amber else Color.Transparent))
             }
         }
     }
@@ -218,37 +210,48 @@ private fun FilterTabs(query: String, onQueryChange: (String) -> Unit, filter: H
 
 @Composable
 private fun DeviceRow(device: Device, onOpen: () -> Unit, onLimit: () -> Unit, onBlock: () -> Unit, onFree: () -> Unit, onWatch: () -> Unit) {
-    val limitedOrBlocked = device.limitRate != null || device.blocked
+    val restricted = device.limitRate != null || device.blocked
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 8.dp),
+        Modifier.fillMaxWidth().heightIn(min = 76.dp).clickable(onClick = onOpen).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("#" + device.id.toString().padStart(2, '0'), color = NetBandColors.Muted, fontFamily = IbmPlexMono, fontSize = 11.sp, modifier = Modifier.width(34.dp))
-                Text(device.ip, color = NetBandColors.Text, fontFamily = IbmPlexMono, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (!device.online) {
-                    Spacer(Modifier.width(8.dp)); Text("offline", color = NetBandColors.Muted, fontFamily = PublicSans, fontSize = 11.sp)
-                }
+                Text(device.ip, color = NetBandColors.Ink, fontFamily = IbmPlexMono, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Text(
-                listOf(shortMac(device.mac), device.hostname.ifBlank { "no hostname" }).joinToString(" · "),
-                color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 34.dp, top = 2.dp)
+                listOf(shortMac(device.mac), device.hostname.ifBlank { "no hostname" }).joinToString("  ·  "),
+                color = NetBandColors.Muted, fontSize = 11.sp, fontFamily = PublicSans, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 34.dp, top = 3.dp)
             )
-            Text(deviceStatus(device), color = if (limitedOrBlocked) NetBandColors.Accent else NetBandColors.Muted, fontSize = 12.sp, fontFamily = IbmPlexMono,
-                modifier = Modifier.padding(start = 34.dp, top = 2.dp), maxLines = 1)
+            Text(
+                deviceStatus(device),
+                color = statusColor(device), fontSize = 11.sp, fontFamily = PublicSans,
+                modifier = Modifier.padding(start = 34.dp, top = 4.dp), maxLines = 1
+            )
         }
-        IconAction(if (device.limitRate != null || device.blocked) Icons.Filled.CheckCircle else Icons.Filled.Speed, if (device.limitRate != null || device.blocked) "Remove limit/block" else "Limit bandwidth", if (device.limitRate != null || device.blocked) onFree else onLimit)
-        IconAction(Icons.Filled.Block, if (device.blocked) "Change block rule" else "Block internet", onBlock)
-        IconAction(if (device.watched) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, if (device.watched) "Remove from watch" else "Add to watch", onWatch)
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            IconAction(if (restricted) Icons.Filled.CheckCircle else Icons.Filled.Speed, if (restricted) "Remove limit or block" else "Limit bandwidth") {
+                if (restricted) onFree() else onLimit()
+            }
+            IconAction(Icons.Filled.Block, if (device.blocked) "Change block rule" else "Block host") { onBlock() }
+            IconAction(if (device.watched) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, if (device.watched) "Stop watching host" else "Watch host") { onWatch() }
+        }
     }
+}
+
+private fun statusColor(device: Device): Color = when {
+    device.blocked -> NetBandColors.Bad
+    device.limitRate != null -> NetBandColors.Amber
+    device.online -> NetBandColors.Cool
+    else -> NetBandColors.Muted
 }
 
 @Composable
 private fun IconAction(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, action: () -> Unit) {
-    IconButton(onClick = action, modifier = Modifier.size(38.dp)) {
-        Icon(icon, contentDescription = description, tint = NetBandColors.Text, modifier = Modifier.size(18.dp))
+    IconButton(onClick = action, modifier = Modifier.size(44.dp)) {
+        Icon(icon, contentDescription = description, tint = NetBandColors.Ink2, modifier = Modifier.size(19.dp))
     }
 }
 
@@ -259,16 +262,18 @@ private fun HorizontalRule() {
 
 @Composable
 private fun VerticalRule() {
-    Box(Modifier.fillMaxHeight().width(1.dp).background(NetBandColors.Rule))
+    Box(Modifier.fillMaxHeight().width(1.dp).background(NetBandColors.Rule2).padding(vertical = 4.dp))
 }
 
 @Composable
-private fun EmptyHosts(query: String, onClear: () -> Unit) {
-    Panel(Modifier.fillMaxWidth().padding(top = 4.dp), content = {
-        Text("No hosts match", color = NetBandColors.Text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, fontFamily = PublicSans)
-        Text(if (query.isBlank()) "Scan the authorized network or add a host by IP." else "Clear the search or scan range to see all discovered hosts.", color = NetBandColors.Muted, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp), fontFamily = PublicSans)
-        MonoButton("Clear filters", onClear, Modifier.padding(top = 12.dp))
-    })
+private fun EmptyHosts(query: String, onClear: () -> Unit, onAdd: () -> Unit) {
+    Panel(Modifier.fillMaxWidth().padding(top = 0.dp)) {
+        Text("No hosts" + if (query.isNotBlank()) " match “$query”" else "", color = NetBandColors.Ink, fontSize = 18.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
+        Text(if (query.isBlank()) "Scan this network or add a known address. Saved hosts stay on this phone until you clear them." else "Clear the search to see the full host list.", color = NetBandColors.Muted, fontSize = 13.sp, lineHeight = 18.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 5.dp))
+        Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PrimaryButton(if (query.isBlank()) "Add host" else "Clear search", if (query.isBlank()) onAdd else onClear, Modifier.weight(1f))
+        }
+    }
 }
 
 @Composable
@@ -278,15 +283,15 @@ private fun AddHostDialog(onDismiss: () -> Unit, onAdd: (String, String) -> Unit
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = NetBandColors.Raised,
-        title = { Text("Add host", color = NetBandColors.Text, fontFamily = PublicSans) },
+        title = { Text("Add host", color = NetBandColors.Ink, fontFamily = PublicSans) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(value = ip, onValueChange = { ip = it }, label = { Text("IP address") }, singleLine = true, textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = IbmPlexMono))
-                OutlinedTextField(value = mac, onValueChange = { mac = it }, label = { Text("MAC (optional)") }, placeholder = { Text("aa:bb:cc:dd:ee:ff") }, singleLine = true, textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = IbmPlexMono))
+                OutlinedTextField(value = mac, onValueChange = { mac = it }, label = { Text("MAC address (optional)") }, placeholder = { Text("aa:bb:cc:dd:ee:ff") }, singleLine = true, textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = IbmPlexMono))
             }
         },
-        confirmButton = { TextButton(onClick = { onAdd(ip, mac) }) { Text("Add", fontFamily = PublicSans) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", fontFamily = PublicSans) } }
+        confirmButton = { TextButton(onClick = { onAdd(ip, mac) }, modifier = Modifier.height(44.dp)) { Text("Add host", color = NetBandColors.Amber, fontFamily = PublicSans) } },
+        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.height(44.dp)) { Text("Cancel", fontFamily = PublicSans) } }
     )
 }
 
@@ -296,34 +301,35 @@ private fun DeviceDetailDialog(device: Device, state: UiState, onDismiss: () -> 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = NetBandColors.Raised,
-        title = { Row(verticalAlignment = Alignment.CenterVertically) { Text(device.ip, fontFamily = IbmPlexMono, color = NetBandColors.Text); Spacer(Modifier.weight(1f)); IconButton(onClick = onDismiss) { Icon(Icons.Filled.Close, null, tint = NetBandColors.Text) } } },
+        title = { Row(verticalAlignment = Alignment.CenterVertically) { Text(device.ip, fontFamily = IbmPlexMono, color = NetBandColors.Ink); Spacer(Modifier.weight(1f)); IconButton(onClick = onDismiss, modifier = Modifier.size(44.dp)) { Icon(Icons.Filled.Close, null, tint = NetBandColors.Ink) } } },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 DetailRow("Host", "#" + device.id.toString().padStart(2, '0'))
                 DetailRow("MAC", device.mac)
-                DetailRow("Hostname", device.hostname.ifBlank { "—" })
+                DetailRow("Hostname", device.hostname.ifBlank { "Not resolved" })
                 DetailRow("State", deviceStatus(device))
                 DetailRow("Watch", if (device.watched) "on" else "off")
-                if (device.limitRate != null) DetailRow("Rate", "${device.limitRate} · ${device.direction}")
+                if (device.limitRate != null) DetailRow("Rate", "${device.limitRate} · ${relativeDirection(device.direction)}")
                 HorizontalRule()
-                Text("Actions", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                Text("Controls", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MonoButton("Limit", onLimit, Modifier.weight(1f))
-                    MonoButton("Block", onBlock, Modifier.weight(1f))
+                    MonoButton("Block", onBlock, Modifier.weight(1f), destructive = true)
                     MonoButton("Free", onFree, Modifier.weight(1f))
                 }
-                MonoButton(if (device.watched) "Unwatch" else "Watch", onWatch, Modifier.fillMaxWidth())
+                MonoButton(if (device.watched) "Stop watching" else "Watch host", onWatch, Modifier.fillMaxWidth())
                 Text("Analyze over", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(1, 5, 30, 60).forEach { seconds ->
                         val selected = seconds == analysisSeconds
-                        TextButton(onClick = { analysisSeconds = seconds }, modifier = Modifier.height(30.dp)) { Text("${seconds}s", color = if (selected) NetBandColors.Text else NetBandColors.Muted, fontFamily = IbmPlexMono) }
-                        if (selected) Box(Modifier.width(1.dp).height(16.dp).background(NetBandColors.Accent))
+                        TextButton(onClick = { analysisSeconds = seconds }, modifier = Modifier.height(44.dp)) {
+                            Text("${seconds}s", color = if (selected) NetBandColors.Amber else NetBandColors.Muted, fontFamily = IbmPlexMono)
+                        }
                     }
                 }
-                MonoButton(if (state.analyzing) "Measuring…" else "Analyze", { onAnalyze(analysisSeconds) }, Modifier.fillMaxWidth(), enabled = !state.analyzing)
+                MonoButton(if (state.analyzing) "Measuring…" else "Analyze $analysisSeconds seconds", { onAnalyze(analysisSeconds) }, Modifier.fillMaxWidth(), enabled = !state.analyzing)
                 if (state.analysisTargetId == device.id) state.analysisResult?.let { result ->
-                    Text(result, color = NetBandColors.Text, fontSize = 12.sp, fontFamily = IbmPlexMono, maxLines = 10)
+                    Text(result, color = NetBandColors.Ink2, fontSize = 12.sp, lineHeight = 17.sp, fontFamily = IbmPlexMono)
                 }
             }
         },
@@ -335,8 +341,8 @@ private fun DeviceDetailDialog(device: Device, state: UiState, onDismiss: () -> 
 @Composable
 private fun DetailRow(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans, modifier = Modifier.width(78.dp))
-        Text(value, color = NetBandColors.Text, fontSize = 12.sp, fontFamily = IbmPlexMono, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(label, color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans, modifier = Modifier.width(80.dp))
+        Text(value, color = NetBandColors.Ink, fontSize = 12.sp, fontFamily = IbmPlexMono, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -347,15 +353,15 @@ private fun LimitDialog(device: Device, onDismiss: () -> Unit, onApply: (String,
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = NetBandColors.Raised,
-        title = { Text("Limit ${device.ip}", color = NetBandColors.Text, fontFamily = IbmPlexMono) },
+        title = { Text("Limit ${device.ip}", color = NetBandColors.Ink, fontFamily = IbmPlexMono) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(value = rate, onValueChange = { rate = it }, label = { Text("Rate") }, placeholder = { Text("512kbit · 2mbit · 10mbit") }, singleLine = true, textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = IbmPlexMono))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(value = rate, onValueChange = { rate = it }, label = { Text("Rate") }, placeholder = { Text("512kbit · 2mbit") }, singleLine = true, textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = IbmPlexMono))
                 DirectionSelector(direction = direction, onDirectionChange = { direction = it })
             }
         },
-        confirmButton = { TextButton(onClick = { onApply(rate.trim(), direction) }) { Text("Apply limit", fontFamily = PublicSans) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", fontFamily = PublicSans) } }
+        confirmButton = { TextButton(onClick = { onApply(rate.trim(), direction) }, modifier = Modifier.height(44.dp)) { Text("Apply limit", color = NetBandColors.Amber, fontFamily = PublicSans) } },
+        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.height(44.dp)) { Text("Cancel", fontFamily = PublicSans) } }
     )
 }
 
@@ -365,15 +371,15 @@ private fun BlockDialog(device: Device, onDismiss: () -> Unit, onBlock: (Directi
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = NetBandColors.Raised,
-        title = { Text("Block ${device.ip}", color = NetBandColors.Text, fontFamily = IbmPlexMono) },
+        title = { Text("Block ${device.ip}", color = NetBandColors.Ink, fontFamily = IbmPlexMono) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Choose whether to drop upload, download, or both directions.", color = NetBandColors.Muted, fontFamily = PublicSans, fontSize = 13.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Drop traffic for this host.", color = NetBandColors.Muted, fontFamily = PublicSans, fontSize = 13.sp)
                 DirectionSelector(direction = direction, onDirectionChange = { direction = it })
             }
         },
-        confirmButton = { TextButton(onClick = { onBlock(direction) }) { Text("Block", fontFamily = PublicSans, color = NetBandColors.Negative) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", fontFamily = PublicSans) } }
+        confirmButton = { TextButton(onClick = { onBlock(direction) }, modifier = Modifier.height(44.dp)) { Text("Block host", fontFamily = PublicSans, color = NetBandColors.Bad) } },
+        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.height(44.dp)) { Text("Cancel", fontFamily = PublicSans) } }
     )
 }
 
@@ -386,14 +392,14 @@ private fun DirectionSelector(direction: Direction, onDirectionChange: (Directio
                 modifier = Modifier
                     .weight(1f)
                     .height(44.dp)
-                    .clip(MaterialTheme.shapes.extraSmall)
-                    .border(1.dp, if (selected) NetBandColors.Accent else NetBandColors.Border, MaterialTheme.shapes.extraSmall)
+                    .clip(RoundedCornerShape(6.dp))
+                    .border(1.dp, if (selected) NetBandColors.Amber else NetBandColors.Rule2, RoundedCornerShape(6.dp))
                     .clickable { onDirectionChange(option) }
                     .padding(horizontal = 4.dp, vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(relativeDirection(option).replaceFirstChar { it.uppercase() }, color = if (selected) NetBandColors.Text else NetBandColors.Muted, fontFamily = PublicSans, fontSize = 12.sp, maxLines = 1)
+                Text(relativeDirection(option).replaceFirstChar { it.uppercase() }, color = if (selected) NetBandColors.Ink else NetBandColors.Muted, fontFamily = PublicSans, fontSize = 12.sp, maxLines = 1)
             }
         }
     }

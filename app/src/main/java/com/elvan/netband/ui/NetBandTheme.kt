@@ -10,18 +10,36 @@ import androidx.compose.ui.text.font.FontWeight
 import com.elvan.netband.R
 
 object NetBandColors {
-    val Ground = Color(0xFF171719)
-    val Surface = Color(0xFF131217)
-    val Raised = Color(0xFF212023)
-    val Border = Color(0xFF222224)
-    val Rule = Color(0xFF1B1A1F)
-    val Control = Color(0xFF3A3A3E)
-    val Text = Color(0xFFFFFFFF)
-    val Muted = Color(0xFF8A8C92)
-    val Accent = Color(0xFF4A8AD6)
-    val Positive = Color(0xFF44A282)
-    val Negative = Color(0xFFE5566F)
-    val Warning = Color(0xFFD9A441)
+    // Console · graphite, mapped to Android Color. Warm black is deliberately not used.
+    val Paper = Color(0xFF171A21)
+    val Paper2 = Color(0xFF1E222A)
+    val Paper3 = Color(0xFF11141A)
+    val Ink = Color(0xFFECEFF4)
+    val Ink2 = Color(0xFFC7CCD5)
+    val Muted = Color(0xFFA7ADB8)
+    val Rule = Color(0xFF303541)
+    val Rule2 = Color(0xFF464D5D)
+    val Amber = Color(0xFFE0A72E)
+    val AmberInk = Color(0xFF211A08)
+    val AmberSoft = Color(0xFF302A18)
+    val Cool = Color(0xFF6AA9DC)
+    val CoolSoft = Color(0xFF182B38)
+    val Ok = Color(0xFF58D09B)
+    val OkSoft = Color(0xFF182B24)
+    val Bad = Color(0xFFE06D6A)
+    val BadSoft = Color(0xFF341F22)
+
+    // Compatibility aliases for the current UI.
+    val Ground = Paper
+    val Surface = Paper3
+    val Raised = Paper2
+    val Border = Rule
+    val Control = Rule2
+    val Text = Ink
+    val Accent = Cool
+    val Positive = Ok
+    val Negative = Bad
+    val Warning = Amber
 }
 
 val PublicSans = FontFamily(
@@ -38,19 +56,19 @@ val IbmPlexMono = FontFamily(
 )
 
 private val NetBandScheme = darkColorScheme(
-    primary = NetBandColors.Accent,
-    onPrimary = Color.White,
-    primaryContainer = NetBandColors.Raised,
-    onPrimaryContainer = NetBandColors.Text,
-    background = NetBandColors.Ground,
-    onBackground = NetBandColors.Text,
-    surface = NetBandColors.Surface,
-    onSurface = NetBandColors.Text,
-    surfaceVariant = NetBandColors.Raised,
+    primary = NetBandColors.Amber,
+    onPrimary = NetBandColors.AmberInk,
+    primaryContainer = NetBandColors.AmberSoft,
+    onPrimaryContainer = NetBandColors.Amber,
+    background = NetBandColors.Paper,
+    onBackground = NetBandColors.Ink,
+    surface = NetBandColors.Paper3,
+    onSurface = NetBandColors.Ink,
+    surfaceVariant = NetBandColors.Paper2,
     onSurfaceVariant = NetBandColors.Muted,
-    outline = NetBandColors.Border,
-    error = NetBandColors.Negative,
-    onError = Color.White
+    outline = NetBandColors.Rule,
+    error = NetBandColors.Bad,
+    onError = NetBandColors.AmberInk
 )
 
 @Composable

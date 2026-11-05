@@ -26,22 +26,22 @@ fun SettingsScreen(vm: NetBandViewModel, onQuit: () -> Unit) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(NetBandColors.Ground)
+            .background(NetBandColors.Paper)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = 16.dp, vertical = 18.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             NetBandMark()
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column {
-                Text("Settings", color = NetBandColors.Text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold, fontFamily = PublicSans)
-                Text("Local controls and command map", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans)
+                Text("Settings", color = NetBandColors.Ink, fontSize = 23.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
+                Text("Authorized local controls", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans)
             }
         }
 
-        StatusLine("Use only on a network and devices you own or are authorized to manage.", Modifier.padding(top = 8.dp))
+        StatusLine("Use only on a network and devices you own or are authorized to manage.", Modifier.padding(top = 10.dp))
 
-        SectionHeader("Network target")
+        SectionHeader("Target")
         Panel(Modifier.fillMaxWidth()) {
             DetailLine("Interface", state.netInfo?.iface ?: "—")
             HorizontalRule(Modifier.padding(vertical = 8.dp))
@@ -49,53 +49,42 @@ fun SettingsScreen(vm: NetBandViewModel, onQuit: () -> Unit) {
             HorizontalRule(Modifier.padding(vertical = 8.dp))
             DetailLine("Gateway", state.netInfo?.gatewayIp ?: "—")
             HorizontalRule(Modifier.padding(vertical = 8.dp))
-            DetailLine("Gateway MAC", state.gatewayMac.ifBlank { "Not discovered yet" })
+            DetailLine("Gateway MAC", state.gatewayMac.ifBlank { "Not discovered" })
             HorizontalRule(Modifier.padding(vertical = 8.dp))
-            DetailLine("Root shell", if (state.hasRoot) "Ready (tc/iptables)" else "Unavailable")
+            DetailLine("Root shell", if (state.hasRoot) "ready" else "unavailable", if (state.hasRoot) NetBandColors.Amber else NetBandColors.Muted)
         }
 
         SectionHeader("Command map")
         Panel(Modifier.fillMaxWidth()) {
-            CommandRow("scan [--range IP-IP]", "Hosts · optional Range field → Scan")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("hosts", "Hosts · all discovered devices")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("limit IDs RATE", "Host → Limit → rate and direction → Apply")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("block IDs", "Host → Block → direction → confirm")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("free IDs|all", "Host → Free or Hosts → Free all")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("add IP [--mac MAC]", "Hosts → Add host")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("monitor [--interval MS]", "Monitor · interval tabs and interface counters")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("analyze IDs [--duration S]", "Host or Monitor → Analyze for 1/5/30/60s")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("status", "Hosts list · Limited/Blocked state per host")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("watch add / remove", "Host → Watch or Watch tab → Bulk commands")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("watch set range|interval VAL", "Watch · History window and interval")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("clear", "Settings · Clear local host list")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("help", "This command map")
-            HorizontalRule(Modifier.padding(vertical = 7.dp))
-            CommandRow("quit", "Close NetBand")
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CommandRow("scan [--range IP-IP]", "Hosts · Range field, then Scan")
+                CommandRow("hosts", "Hosts · all discovered devices")
+                CommandRow("limit IDs RATE", "Host · Limit · rate and direction")
+                CommandRow("block IDs", "Host · Block · direction, then confirm")
+                CommandRow("free IDs | all", "Host · Free, or Hosts · Free all")
+                CommandRow("add IP [--mac MAC]", "Hosts · Add host")
+                CommandRow("monitor [--interval MS]", "Monitor · interval chips")
+                CommandRow("analyze IDs [--duration S]", "Host or Monitor · 1s, 5s, 30s or 60s")
+                CommandRow("status", "Hosts · state column on every row")
+                CommandRow("watch add / remove", "Host · Watch, or Watch · bulk commands")
+                CommandRow("watch set range | interval", "Watch · History window and check interval")
+                CommandRow("clear", "Settings · Clear local host list")
+                CommandRow("help", "Settings · This command map")
+                CommandRow("quit", "Close NetBand")
+            }
         }
 
         SectionHeader("Local data")
         Panel(Modifier.fillMaxWidth()) {
-            Text("Stored on this device", color = NetBandColors.Text, fontSize = 14.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
-            Text("Device IDs, IPs, MAC addresses, hostnames, limit/block/watch state are kept in app-private storage. Clearing removes the list and watch entries, not any root iptables or tc rules that were already applied.", color = NetBandColors.Muted, fontSize = 12.sp, lineHeight = 17.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 5.dp))
-            MonoButton("Clear local data", { showClearConfirm = true }, Modifier.padding(top = 12.dp), destructive = true)
+            Text("Stored on this phone", color = NetBandColors.Ink, fontSize = 14.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
+            Text("IDs, addresses, hostnames, and limit/block/watch state. Clearing removes the saved list; it does not undo rules already applied through tc or iptables.", color = NetBandColors.Muted, fontSize = 12.sp, lineHeight = 17.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 5.dp))
+            MonoButton("Clear local data", { showClearConfirm = true }, Modifier.padding(top = 14.dp).fillMaxWidth(), destructive = true)
         }
 
         SectionHeader("App")
         Panel(Modifier.fillMaxWidth()) {
-            Text("NetBand", color = NetBandColors.Text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, fontFamily = PublicSans)
-            Text("Authorized network control panel for Android. Built from the command-line feature set.", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 4.dp))
+            Text("NetBand", color = NetBandColors.Ink, fontSize = 18.sp, fontWeight = FontWeight.Medium, fontFamily = PublicSans)
+            Text("Local network administration from an Android device.", color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans, modifier = Modifier.padding(top = 4.dp))
             PrimaryButton("Quit", onQuit, Modifier.padding(top = 14.dp).fillMaxWidth())
         }
 
@@ -106,27 +95,31 @@ fun SettingsScreen(vm: NetBandViewModel, onQuit: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
             containerColor = NetBandColors.Raised,
-            title = { Text("Clear local data?", color = NetBandColors.Text, fontFamily = PublicSans) },
-            text = { Text("This deletes the saved host list and watch entries. Active root rules are not removed automatically.", color = NetBandColors.Muted, fontFamily = PublicSans) },
-            confirmButton = { TextButton(onClick = { vm.clear(); showClearConfirm = false }) { Text("Clear", color = NetBandColors.Negative, fontFamily = PublicSans) } },
-            dismissButton = { TextButton(onClick = { showClearConfirm = false }) { Text("Keep", fontFamily = PublicSans) } }
+            title = { Text("Clear local data?", color = NetBandColors.Ink, fontFamily = PublicSans) },
+            text = { Text("This deletes the saved host list and watch entries. Existing root rules are not removed.", color = NetBandColors.Muted, fontFamily = PublicSans, lineHeight = 18.sp) },
+            confirmButton = { TextButton(onClick = { vm.clear(); showClearConfirm = false }, modifier = Modifier.height(44.dp)) { Text("Clear data", color = NetBandColors.Bad, fontFamily = PublicSans) } },
+            dismissButton = { TextButton(onClick = { showClearConfirm = false }, modifier = Modifier.height(44.dp)) { Text("Keep data", color = NetBandColors.Ink2, fontFamily = PublicSans) } }
         )
     }
 }
 
 @Composable
-private fun DetailLine(label: String, value: String) {
+private fun DetailLine(label: String, value: String, tint: androidx.compose.ui.graphics.Color = NetBandColors.Ink) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = NetBandColors.Muted, fontSize = 12.sp, fontFamily = PublicSans, modifier = Modifier.width(112.dp))
-        Text(value, color = NetBandColors.Text, fontSize = 12.sp, fontFamily = IbmPlexMono, modifier = Modifier.weight(1f))
+        Text(value, color = tint, fontSize = 12.sp, fontFamily = IbmPlexMono, modifier = Modifier.weight(1f))
     }
 }
 
 @Composable
 private fun CommandRow(command: String, destination: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        Text(command, color = NetBandColors.Text, fontSize = 11.sp, fontFamily = IbmPlexMono, modifier = Modifier.width(150.dp))
-        Text(destination, color = NetBandColors.Muted, fontSize = 12.sp, lineHeight = 16.sp, fontFamily = PublicSans, modifier = Modifier.weight(1f))
+        Box(Modifier.width(1.dp).height(26.dp).background(NetBandColors.Rule2))
+        Spacer(Modifier.width(10.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(1.dp), modifier = Modifier.weight(1f)) {
+            Text(command, color = NetBandColors.Ink, fontSize = 11.sp, fontFamily = IbmPlexMono)
+            Text(destination, color = NetBandColors.Muted, fontSize = 12.sp, lineHeight = 16.sp, fontFamily = PublicSans)
+        }
     }
 }
 
