@@ -14,12 +14,26 @@ object InterfaceStats {
         val sampledAtMs: Long
     )
 
-    /** Parse /proc/net/dev. Values are cumulative since boot. */
-    fun read(iface: String): Counters? {
-        return try {
-            val line = File("/proc/net/dev").readLines()
-                .firstOrNull { it.trimStart().startsWith("$iface:") }
-                ?: return null
+    fun read(iface: String, useRoot: Boolean = false): Counters? {
+        return readLines(iface, useRoot)?.let(::parseLine)
+    }
+
+    private fun readLines(iface: String, useRoot: Boolean): String? {
+        val direct = try {
+            File("/proc/net/dev").readLines()
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val directLine = direct.firstOrNull { it.trimStart().startsWith("$iface:") }
+        if (directLine != null) return directLine
+        if (!useRoot) return null
+        return RootShell.exec("cat /proc/net/dev 2>/dev/null")
+            .firstOrNull { it.trimStart().startsWith("$iface:") }
+    }
+
+    private fun parseLine(line: String): Counters? {
+        val iface = line.substringBefore(':').trim()
+            return try {
             val raw = line.substringAfter(':').trim().split(Regex("\\s+"))
             if (raw.size < 16) return null
             Counters(

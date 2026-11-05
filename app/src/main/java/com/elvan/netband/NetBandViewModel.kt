@@ -25,6 +25,7 @@ data class UiState(
     val rxRateBytesPerSecond: Double? = null,
     val txRateBytesPerSecond: Double? = null,
     val analysisResult: String? = null,
+    val analysisTargetId: Int? = null,
     val analyzing: Boolean = false,
     val watchIntervalMs: Long = 5_000,
     val watchWindowSeconds: Long = 300,
@@ -54,7 +55,7 @@ class NetBandViewModel(app: Application) : AndroidViewModel(app) {
             )
             if (hasRoot) Limiter.resolveBinaries()
             if (ni != null) resolveGateway(ni)
-            refreshMonitor()
+            if (ni != null) refreshMonitor()
         }
     }
 
@@ -283,7 +284,7 @@ class NetBandViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshMonitor() {
         val iface = _state.value.netInfo?.iface ?: return
-        val current = InterfaceStats.read(iface) ?: return
+        val current = InterfaceStats.read(iface, _state.value.hasRoot) ?: return
         val previous = _state.value.monitor
         val elapsedSeconds = previous?.let { (current.sampledAtMs - it.sampledAtMs).coerceAtLeast(1) / 1000.0 }
         val rxRate = if (previous != null && elapsedSeconds != null) (current.rxBytes - previous.rxBytes) / elapsedSeconds else null
@@ -300,10 +301,10 @@ class NetBandViewModel(app: Application) : AndroidViewModel(app) {
         val iface = _state.value.netInfo?.iface
         if (iface == null) return@launch
         val seconds = durationSeconds.coerceIn(1, 120)
-        _state.value = _state.value.copy(analyzing = true, analysisResult = null)
-        val before = InterfaceStats.read(iface)
+        _state.value = _state.value.copy(analyzing = true, analysisResult = null, analysisTargetId = device.id)
+        val before = InterfaceStats.read(iface, _state.value.hasRoot)
         delay(seconds * 1000L)
-        val after = InterfaceStats.read(iface)
+        val after = InterfaceStats.read(iface, _state.value.hasRoot)
         val body = if (before == null || after == null) {
             "Network counters for ${device.ip} were not readable from /proc/net/dev on this device."
         } else {
@@ -329,7 +330,11 @@ class NetBandViewModel(app: Application) : AndroidViewModel(app) {
                 "Interface drops — RX ${after.rxDrops} / TX ${after.txDrops}\n" +
                 "Per-host bytes are not available from Android & root-free interfaces; this is the honest interface window."
         }
-        _state.value = _state.value.copy(analyzing = false, analysisResult = body)
+        _state.value = _state.value.copy(analyzing = false, analysisResult = body, analysisTargetId = device.id)
+    }
+
+    fun clearAnalysis() {
+        _state.value = _state.value.copy(analysisResult = null, analysisTargetId = null)
     }
 
     private fun sortedDevices(): List<Device> = deviceMap.values.sortedWith(compareBy<Device> { !it.online }.thenBy { it.id })

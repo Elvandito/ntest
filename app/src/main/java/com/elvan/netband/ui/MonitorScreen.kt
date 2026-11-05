@@ -116,7 +116,7 @@ fun MonitorScreen(vm: NetBandViewModel) {
                 state.devices.forEach { d ->
                     val selected = target?.id == d.id
                     TextButton(
-                        onClick = { analysisTargetId = d.id },
+                        onClick = { analysisTargetId = d.id; vm.clearAnalysis() },
                         shape = MaterialTheme.shapes.extraSmall
                     ) {
                         Text("#${d.id.toString().padStart(2, '0')} ${d.ip}", color = if (selected) NetBandColors.Text else NetBandColors.Muted, fontFamily = IbmPlexMono, fontSize = 12.sp)
@@ -138,7 +138,7 @@ fun MonitorScreen(vm: NetBandViewModel) {
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 enabled = target != null && !state.analyzing
             )
-            state.analysisResult?.let { result ->
+            if (state.analysisTargetId == target?.id) state.analysisResult?.let { result ->
                 Panel(Modifier.fillMaxWidth().padding(top = 10.dp)) {
                     Text(result, color = NetBandColors.Text, fontFamily = IbmPlexMono, fontSize = 12.sp, lineHeight = 17.sp)
                 }

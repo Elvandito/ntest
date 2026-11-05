@@ -3,6 +3,8 @@ package com.elvan.netband.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clip
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -320,7 +322,7 @@ private fun DeviceDetailDialog(device: Device, state: UiState, onDismiss: () -> 
                     }
                 }
                 MonoButton(if (state.analyzing) "Measuring…" else "Analyze", { onAnalyze(analysisSeconds) }, Modifier.fillMaxWidth(), enabled = !state.analyzing)
-                state.analysisResult?.let { result ->
+                if (state.analysisTargetId == device.id) state.analysisResult?.let { result ->
                     Text(result, color = NetBandColors.Text, fontSize = 12.sp, fontFamily = IbmPlexMono, maxLines = 10)
                 }
             }
@@ -377,12 +379,21 @@ private fun BlockDialog(device: Device, onDismiss: () -> Unit, onBlock: (Directi
 
 @Composable
 private fun DirectionSelector(direction: Direction, onDirectionChange: (Direction) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         Direction.entries.forEach { option ->
             val selected = option == direction
-            Column(Modifier.clickable { onDirectionChange(option) }.padding(vertical = 2.dp)) {
-                Text(relativeDirection(option).replaceFirstChar { it.uppercase() }, color = if (selected) NetBandColors.Text else NetBandColors.Muted, fontFamily = PublicSans, fontSize = 12.sp)
-                Box(Modifier.padding(top = 3.dp).height(1.dp).fillMaxWidth().background(if (selected) NetBandColors.Accent else Color.Transparent))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .border(1.dp, if (selected) NetBandColors.Accent else NetBandColors.Border, MaterialTheme.shapes.extraSmall)
+                    .clickable { onDirectionChange(option) }
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(relativeDirection(option).replaceFirstChar { it.uppercase() }, color = if (selected) NetBandColors.Text else NetBandColors.Muted, fontFamily = PublicSans, fontSize = 12.sp, maxLines = 1)
             }
         }
     }
