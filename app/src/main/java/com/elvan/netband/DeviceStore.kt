@@ -25,7 +25,8 @@ object DeviceStore {
                     online = o.optBoolean("online", true),
                     limitRate = o.optString("limitRate", "").ifEmpty { null },
                     direction = Direction.valueOf(o.optString("direction", "BOTH")),
-                    blocked = o.optBoolean("blocked", false)
+                    blocked = o.optBoolean("blocked", false),
+                    watched = o.optBoolean("watched", false)
                 )
                 map[d.mac] = d
             }
@@ -47,6 +48,7 @@ object DeviceStore {
             o.put("limitRate", d.limitRate ?: "")
             o.put("direction", d.direction.name)
             o.put("blocked", d.blocked)
+            o.put("watched", d.watched)
             arr.put(o)
         }
         File(context.filesDir, FILE).writeText(arr.toString())

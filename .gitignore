@@ -29,3 +29,6 @@ local.properties
 # OS files
 .DS_Store
 Thumbs.db
+
+# Design exploration output
+.taste-skill/

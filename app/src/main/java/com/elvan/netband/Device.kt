@@ -10,5 +10,6 @@ data class Device(
     var online: Boolean = true,
     var limitRate: String? = null,   // e.g. "512kbit", null = not rate-limited
     var direction: Direction = Direction.BOTH,
-    var blocked: Boolean = false
+    var blocked: Boolean = false,
+    var watched: Boolean = false
 )
