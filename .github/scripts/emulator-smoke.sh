@@ -8,6 +8,7 @@ mkdir -p screenshots
 : > screenshots/root-diagnostics.txt
 
 artifact_dir="${GITHUB_WORKSPACE}/artifact"
+root_client="${GITHUB_WORKSPACE}/root-tools/netband-su"
 apk="$(find "$artifact_dir" -type f -name 'app-debug.apk' -print -quit)"
 if [ -z "$apk" ]; then
   echo "Debug APK not found in downloaded artifact: $artifact_dir" >&2
@@ -215,9 +216,15 @@ SUEOF
     echo "Root daemon build failed"
     return 0
   fi
-  if ! gcc -static -O2 -s -o /tmp/netband-su /tmp/netband-su.c; then
-    echo "Root client build failed"
-    return 0
+  if [ -x "$root_client" ]; then
+    cp "$root_client" /tmp/netband-su
+    chmod 755 /tmp/netband-su
+    echo "Using prebuilt Android su client"
+  else
+    if ! gcc -static -O2 -s -o /tmp/netband-su /tmp/netband-su.c; then
+      echo "Root client build failed"
+      return 0
+    fi
   fi
 
   adb push /tmp/netband-sud /data/local/tmp/netband-sud >/dev/null 2>&1 || true
@@ -300,7 +307,7 @@ capture() {
 }
 
 ui_dump() {
-  adb shell uiautomator dump --compressed /sdcard/netband-window.xml >/dev/null 2>&1 || true
+  adb shell uiautomator dump /sdcard/netband-window.xml >/dev/null 2>&1 || true
   adb pull /sdcard/netband-window.xml /tmp/netband-window.xml >/dev/null 2>&1 || true
 }
 
@@ -402,18 +409,18 @@ screen_height="${screen_height:-2400}"
 tap_label() {
   local label="$1"
   local coords x y
-  for attempt in 1 2 3 4 5 6; do
+  for attempt in 1 2 3 4 5 6 7 8; do
     coords="$(ui_find "$label")"
     if [ -n "$coords" ]; then
       x="${coords%% *}"
       y="${coords##* }"
       if [ "$y" -lt 0 ]; then
-        adb shell input swipe 540 700 540 "$((screen_height - 500))" 300
+        adb shell input swipe 540 700 540 "$((screen_height - 600))" 300
         sleep 1
         continue
       fi
       if [ "$y" -gt "$((screen_height - 20))" ]; then
-        adb shell input swipe 540 "$((screen_height - 500))" 540 700 300
+        adb shell input swipe 540 "$((screen_height - 600))" 540 700 300
         sleep 1
         continue
       fi
@@ -421,9 +428,10 @@ tap_label() {
       sleep 1.5
       return 0
     fi
-    if [ "$attempt" -eq 3 ]; then
-      adb shell input swipe 540 "$((screen_height - 500))" 540 700 300
-      sleep 1
+    if [ "$attempt" -le 4 ]; then
+      adb shell input swipe 540 "$((screen_height - 600))" 540 700 300
+    else
+      adb shell input swipe 540 700 540 "$((screen_height - 600))" 300
     fi
     sleep 1
   done
@@ -455,12 +463,37 @@ scroll_top() {
 assert_text() {
   local needle="$1"
   local description="${2:-$1}"
-  if wait_for_text "$needle" 6; then
+  if wait_for_text "$needle" 4; then
     pass "$description"
   else
+    for _ in 1 2 3; do
+      adb shell input swipe 540 "$((screen_height - 600))" 540 700 300 >/dev/null 2>&1 || true
+      sleep 1
+      if ui_contains "$needle"; then
+        pass "$description"
+        return 0
+      fi
+    done
+    for _ in 1 2 3; do
+      adb shell input swipe 540 700 540 "$((screen_height - 600))" 300 >/dev/null 2>&1 || true
+      sleep 1
+      if ui_contains "$needle"; then
+        pass "$description"
+        return 0
+      fi
+    done
     fail "$description (missing '$needle')"
     ui_debug
   fi
+}
+
+ensure_app() {
+  if adb shell dumpsys activity activities 2>/dev/null | grep -Eq 'mResumedActivity.*com\.elvan\.netband|topResumedActivity.*com\.elvan\.netband'; then
+    return 0
+  fi
+  echo "NetBand is not in the foreground; relaunching it"
+  adb shell am start -n com.elvan.netband/.MainActivity >/dev/null 2>&1 || true
+  sleep 4
 }
 
 input_text() {
@@ -478,10 +511,23 @@ set +e
 echo "=== UI smoke tests ==="
 assert_text "NetBand" "Hosts screen loaded"
 assert_text "saved hosts" "hosts summary visible"
+ensure_app
 if [ "$ROOT_READY" = 1 ]; then
-  assert_text "root ready" "app reports root ready"
-  assert_text "Network ready" "root hero shown"
+  if ui_contains "root ready"; then
+    APP_ROOT=1
+    pass "app reports root ready"
+  else
+    APP_ROOT=0
+    fail "app reports root ready (missing 'root ready')"
+    echo "WARN: emulator root is available but the app could not use it; root-only actions will be reported as refused"
+  fi
+  if [ "$APP_ROOT" = 1 ]; then
+    assert_text "Network ready" "root hero shown"
+  else
+    assert_text "scan-only" "app reports scan-only mode"
+  fi
 else
+  APP_ROOT=0
   echo "WARN: emulator root is unavailable; root-only actions will be reported as refused"
   assert_text "scan-only" "app reports scan-only mode"
 fi
@@ -522,14 +568,16 @@ assert_text "10.0.2.15" "manual host added"
 capture netband-hosts
 
 echo "=== Host detail and limit/block/free/watch/analyze ==="
-tap_label "Open 10.0.2.15" || fail "open host detail"
+ensure_app
+scroll_top
+tap_label "Open 10.0.2.15" || tap_label "10.0.2.15" || fail "open host detail"
 assert_text "Controls" "host detail opened"
 tap_label "Limit" || fail "open limit dialog"
 assert_text "Apply limit" "limit dialog opened"
 capture netband-limit-dialog
 tap_label "Apply limit" || fail "apply limit"
 sleep 4
-if [ "$ROOT_READY" = 1 ]; then
+if [ "$APP_ROOT" = 1 ]; then
   assert_text "Limited" "limit applied with root"
 else
   assert_text "Root required" "limit refused without root"
@@ -539,7 +587,7 @@ tap_label "Block" || fail "open block dialog"
 assert_text "Block host" "block dialog opened"
 tap_label "Block host" || fail "confirm block"
 sleep 4
-if [ "$ROOT_READY" = 1 ]; then
+if [ "$APP_ROOT" = 1 ]; then
   assert_text "Blocked" "block applied with root"
 else
   assert_text "Root required" "block refused without root"
@@ -556,7 +604,7 @@ assert_text "Stop watching" "host is watched"
 tap_label "1s" || fail "select 1 second analysis"
 tap_label "Analyze 1 seconds" || fail "start host analysis"
 sleep 3
-if [ "$ROOT_READY" = 1 ]; then
+if [ "$APP_ROOT" = 1 ]; then
   assert_text "ANALYSIS" "host analysis returned interface data"
 else
   if ui_contains "ANALYSIS"; then
@@ -566,10 +614,14 @@ else
   fi
 fi
 capture netband-host-detail
-tap_label "Close" || adb shell input keyevent 4
+if ui_contains "Controls"; then
+  tap_label "Close" || adb shell input keyevent 4
+fi
 sleep 1
 
 echo "=== Batch actions ==="
+ensure_app
+scroll_top
 tap_label "Free all" || fail "tap Free all"
 sleep 2
 scroll_top
@@ -580,7 +632,7 @@ assert_text "Block all hosts" "block-all dialog opened"
 tap_label "Block all hosts" || fail "confirm block-all"
 sleep 4
 scroll_top
-if [ "$ROOT_READY" = 1 ]; then
+if [ "$APP_ROOT" = 1 ]; then
   assert_text "Blocked all 1 host" "block all applied"
   assert_text "Blocked" "host row shows blocked"
 else
@@ -591,14 +643,18 @@ capture netband-batch-block
 tap_label "Free all" || fail "free all after block"
 sleep 3
 scroll_top
-assert_text "Freed 1 host" "free all after block"
+if [ "$APP_ROOT" = 1 ]; then
+  assert_text "Freed 1 host" "free all after block"
+else
+  assert_text "Nothing to free" "nothing to free after refused block"
+fi
 
 tap_label "Limit all" || fail "open limit-all dialog"
 assert_text "Apply to all" "limit-all dialog opened"
 tap_label "Apply to all" || fail "confirm limit-all"
 sleep 5
 scroll_top
-if [ "$ROOT_READY" = 1 ]; then
+if [ "$APP_ROOT" = 1 ]; then
   assert_text "Limited all 1 host" "limit all applied"
   assert_text "Limited 512kbit" "host row shows limit"
 else
@@ -609,9 +665,14 @@ capture netband-batch-limit
 tap_label "Free all" || fail "free all after limit"
 sleep 3
 scroll_top
-assert_text "Freed 1 host" "free all after limit"
+if [ "$APP_ROOT" = 1 ]; then
+  assert_text "Freed 1 host" "free all after limit"
+else
+  assert_text "Nothing to free" "nothing to free after refused limit"
+fi
 
 echo "=== Monitor ==="
+ensure_app
 tap_label "Monitor" || fail "open Monitor"
 assert_text "Monitor" "Monitor screen loaded"
 tap_label "250ms" || fail "select 250ms refresh"
@@ -621,6 +682,7 @@ assert_text "ANALYSIS" "monitor analysis returned a report"
 capture netband-monitor
 
 echo "=== Watch ==="
+ensure_app
 tap_label "Watch" || fail "open Watch"
 assert_text "10.0.2.15" "watched host listed"
 capture netband-watch
@@ -632,6 +694,7 @@ sleep 2
 assert_text "All hosts removed from watch" "Remove all cleared every watch entry"
 
 echo "=== Settings and clear data ==="
+ensure_app
 tap_label "Settings" || fail "open Settings"
 assert_text "Command map" "command map visible"
 assert_text "scan [--range IP-IP]" "help command map includes scan"
@@ -651,6 +714,7 @@ tap_label "Hosts" || fail "return to Hosts after clear"
 assert_text "No hosts yet" "Clear data removed the saved host"
 
 echo "=== Quit ==="
+ensure_app
 tap_label "Settings" || fail "open Settings before quit"
 tap_label "Quit" || fail "tap Quit"
 sleep 3

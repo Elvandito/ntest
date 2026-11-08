@@ -39,6 +39,7 @@ object RootShell {
                 }
                 return code to output
             } catch (e: IOException) {
+                Log.w(TAG, "su attempt failed: $su: ${e.message}")
                 lastError = e
             }
         }

@@ -72,6 +72,27 @@ jobs:
             exit "$install_status"
           fi
 
+      - name: Build root test client with the Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          ndk_dir="${ANDROID_HOME}/ndk/27.0.12077973"
+          cc="${ndk_dir}/toolchains/llvm/prebuilt/linux-x86_64/bin/x86_64-linux-android34-clang"
+          if [ ! -x "$cc" ]; then
+            echo "NDK clang not found at $cc" >&2
+            exit 1
+          fi
+          "$cc" -static -O2 -s -o netband-su .github/scripts/netband-su.c
+          file netband-su
+
+      - name: Upload root test client
+        uses: actions/upload-artifact@v4
+        with:
+          name: netband-root-tools-${{ github.sha }}
+          path: netband-su
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Show toolchain versions
         shell: bash
         run: |
@@ -115,6 +136,12 @@ jobs:
         with:
           name: netband-android-${{ github.sha }}
           path: artifact
+
+      - name: Download root test client
+        uses: actions/download-artifact@v4
+        with:
+          name: netband-root-tools-${{ github.sha }}
+          path: root-tools
 
       - name: Install fallback su build tools
         shell: bash
