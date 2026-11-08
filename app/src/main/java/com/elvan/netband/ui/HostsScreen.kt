@@ -269,7 +269,7 @@ private fun HostRow(device: Device, onOpen: () -> Unit) {
 private fun EmptyHosts(query: String, onClear: () -> Unit, onAdd: () -> Unit, onScan: () -> Unit) {
     Panel(Modifier.fillMaxWidth()) {
         Text(
-            if (query.isBlank()) "No hosts yet" else "No match for â€œ$queryâ€",
+            if (query.isBlank()) "No hosts yet" else "No match for \"$query\"",
             color = NetBandColors.Ink,
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,
