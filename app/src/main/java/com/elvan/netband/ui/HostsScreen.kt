@@ -81,7 +81,7 @@ fun HostsScreen(vm: NetBandViewModel) {
     ) {
         ScreenHeader(
             title = "NetBand",
-            subtitle = "${state.devices.size} saved hosts Â· ${if (state.hasRoot) "root ready" else "scan-only"}"
+            subtitle = "${state.devices.size} saved hosts · ${if (state.hasRoot) "root ready" else "scan-only"}"
         ) {
             OutlinedIconButton(onClick = { showAdd = true }, contentDescription = "Add host") {
                 Icon(Icons.Filled.Add, contentDescription = null, tint = NetBandColors.Ink, modifier = Modifier.size(21.dp))
@@ -110,7 +110,7 @@ fun HostsScreen(vm: NetBandViewModel) {
             state.hasRoot -> "Root shell is available. Limits, blocks, and interface counters are ready."
             else -> "Root shell is unavailable. Discovery and manual add still work."
         }
-        val heroDetail = if (network != null) "${network.iface} Â· ${network.localIp}" else "No active interface"
+        val heroDetail = if (network != null) "${network.iface} · ${network.localIp}" else "No active interface"
         HeroStatusCard(
             title = heroTitle,
             subtitle = heroSubtitle,
@@ -124,9 +124,9 @@ fun HostsScreen(vm: NetBandViewModel) {
 
         SectionHeader("This network")
         Panel(Modifier.fillMaxWidth()) {
-            InfoRow("Gateway", network?.gatewayIp ?: "â€”")
+            InfoRow("Gateway", network?.gatewayIp ?: "—")
             InfoRow("Gateway MAC", state.gatewayMac.ifBlank { "Not discovered" })
-            InfoRow("Subnet prefix", network?.let { "/${it.prefixLength}" } ?: "â€”")
+            InfoRow("Subnet prefix", network?.let { "/${it.prefixLength}" } ?: "—")
             InfoRow("Watched hosts", state.devices.count { it.watched }.toString())
         }
 
@@ -167,7 +167,7 @@ fun HostsScreen(vm: NetBandViewModel) {
             }
         }
 
-        SectionHeader("Hosts Â· ${filtered.size}") {
+        SectionHeader("Hosts · ${filtered.size}") {
             TextButton(onClick = { vm.freeAll() }) {
                 Text("Free all", color = NetBandColors.Blue, fontSize = 14.sp, fontFamily = PublicSans)
             }
@@ -240,7 +240,7 @@ private fun HostRow(device: Device, onOpen: () -> Unit) {
                 }
             }
             Text(
-                listOf(device.hostname.ifBlank { "No hostname" }, shortMac(device.mac)).joinToString(" Â· "),
+                listOf(device.hostname.ifBlank { "No hostname" }, shortMac(device.mac)).joinToString(" · "),
                 color = NetBandColors.Muted,
                 fontSize = 12.sp,
                 fontFamily = PublicSans,
@@ -250,7 +250,7 @@ private fun HostRow(device: Device, onOpen: () -> Unit) {
             )
             if (device.limitRate != null) {
                 Text(
-                    "${device.limitRate} Â· ${relativeDirection(device.direction)}",
+                    "${device.limitRate} · ${relativeDirection(device.direction)}",
                     color = NetBandColors.Amber,
                     fontSize = 12.sp,
                     fontFamily = PublicSans,
@@ -360,7 +360,7 @@ private fun DeviceDetailDialog(
                 InfoRow("MAC", shortMac(device.mac))
                 InfoRow("Hostname", device.hostname.ifBlank { "Not resolved" })
                 InfoRow("Watch", if (device.watched) "On" else "Off")
-                if (device.limitRate != null) InfoRow("Rate", "${device.limitRate} Â· ${relativeDirection(device.direction)}")
+                if (device.limitRate != null) InfoRow("Rate", "${device.limitRate} · ${relativeDirection(device.direction)}")
                 Spacer(Modifier.height(10.dp))
                 Text("Controls", color = NetBandColors.Muted, fontSize = 13.sp, fontFamily = PublicSans)
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -377,7 +377,7 @@ private fun DeviceDetailDialog(
                     }
                 }
                 PrimaryButton(
-                    if (state.analyzing) "Measuringâ€¦" else "Analyze $analysisSeconds seconds",
+                    if (state.analyzing) "Measuring…" else "Analyze $analysisSeconds seconds",
                     { onAnalyze(analysisSeconds) },
                     Modifier.fillMaxWidth().padding(top = 10.dp),
                     enabled = !state.analyzing
@@ -405,7 +405,7 @@ private fun LimitDialog(device: Device, onDismiss: () -> Unit, onApply: (String,
         title = { Text("Limit ${device.ip}", color = NetBandColors.Ink, fontFamily = PublicSans, fontWeight = FontWeight.SemiBold, fontSize = 21.sp) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                DarkField(value = rate, onValueChange = { rate = it }, label = "Rate", placeholder = "512kbit Â· 2mbit")
+                DarkField(value = rate, onValueChange = { rate = it }, label = "Rate", placeholder = "512kbit · 2mbit")
                 DirectionSelector(direction, { direction = it })
             }
         },

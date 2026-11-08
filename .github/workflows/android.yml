@@ -116,6 +116,12 @@ jobs:
           name: netband-android-${{ github.sha }}
           path: artifact
 
+      - name: Install fallback su build tools
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq gcc libc6-dev
+
       - name: Enable KVM
         shell: bash
         run: |
@@ -131,7 +137,7 @@ jobs:
           target: default
           profile: pixel_6
           emulator-boot-timeout: 600
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -writable-system
           disable-animations: true
           script: bash .github/scripts/emulator-smoke.sh
 
@@ -139,6 +145,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: netband-screenshots-${{ github.sha }}
-          path: screenshots/*.png
+          path: screenshots/*
           if-no-files-found: error
           retention-days: 14
