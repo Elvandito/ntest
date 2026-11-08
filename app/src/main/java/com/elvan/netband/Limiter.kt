@@ -35,7 +35,7 @@ object Limiter {
     private fun ensureRoot(iface: String) {
         val show = RootShell.exec("$tcBin qdisc show dev $iface").joinToString()
         if (!show.contains("htb")) {
-            if (RootShell.execBool("$tcBin qdisc add dev $iface root handle 1: htb default 1")) {
+            if (RootShell.execBool("$tcBin qdisc replace dev $iface root handle 1: htb default 1")) {
                 if (RootShell.execBool("$tcBin class add dev $iface parent 1: classid 1:1 htb rate 1000gbit ceil 1000gbit")) {
                     ownsQdisc = true
                 } else {
