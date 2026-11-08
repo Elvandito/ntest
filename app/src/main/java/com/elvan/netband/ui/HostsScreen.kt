@@ -374,6 +374,7 @@ private fun DeviceDetailDialog(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                if (state.message.isNotBlank()) StatusLine(state.message, Modifier.padding(bottom = 4.dp))
                 InfoRow("Host", "#" + device.id.toString().padStart(2, '0'))
                 InfoRow("MAC", shortMac(device.mac))
                 InfoRow("Hostname", device.hostname.ifBlank { "Not resolved" })

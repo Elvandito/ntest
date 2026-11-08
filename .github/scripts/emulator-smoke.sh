@@ -216,7 +216,7 @@ SUEOF
     echo "Root daemon build failed"
     return 0
   fi
-  if [ -x "$root_client" ]; then
+  if [ -f "$root_client" ]; then
     cp "$root_client" /tmp/netband-su
     chmod 755 /tmp/netband-su
     echo "Using prebuilt Android su client"
@@ -676,7 +676,7 @@ ensure_app
 tap_label "Monitor" || fail "open Monitor"
 assert_text "Monitor" "Monitor screen loaded"
 tap_label "250ms" || fail "select 250ms refresh"
-tap_label "Analyze 10.0.2.15" || fail "start monitor analysis"
+tap_label "Analyze host" || fail "start monitor analysis"
 sleep 3
 assert_text "ANALYSIS" "monitor analysis returned a report"
 capture netband-monitor

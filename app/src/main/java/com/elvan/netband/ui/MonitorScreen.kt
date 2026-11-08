@@ -226,7 +226,8 @@ fun MonitorScreen(vm: NetBandViewModel) {
                 text = if (state.analyzing) "Measuring…" else "Analyze ${target?.ip ?: ""}",
                 onClick = { target?.let { vm.analyze(it, analysisSeconds) } },
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                enabled = target != null && !state.analyzing
+                enabled = target != null && !state.analyzing,
+                contentDescription = "Analyze host"
             )
             if (state.analysisTargetId == target?.id) {
                 state.analysisResult?.let { result ->

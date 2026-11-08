@@ -304,10 +304,10 @@ fun StatusLine(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, contentDescription: String? = null) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(42.dp),
+        modifier = modifier.height(42.dp).then(if (contentDescription != null) Modifier.semantics { this.contentDescription = contentDescription } else Modifier),
         enabled = enabled,
         shape = ControlShape,
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 0.dp),
