@@ -281,10 +281,14 @@ echo "NetBand started with pid $pid; ROOT_READY=$ROOT_READY"
   echo "tc: $(adb shell 'command -v tc' 2>&1 | tr -d '\r' || true)"
   echo "iptables: $(adb shell 'command -v iptables' 2>&1 | tr -d '\r' || true)"
   echo "app-context su id: $(adb shell run-as com.elvan.netband /system/bin/su -c id 2>&1 | tr -d '\r' || true)"
-  echo "app-context caps: $(adb shell run-as com.elvan.netband /system/bin/su -c 'grep Cap /proc/self/status' 2>&1 | tr -d '\r' || true)"
+  echo "app-context caps: $(adb shell run-as com.elvan.netband /system/bin/su -c 'cat /proc/self/status | grep Cap' 2>&1 | tr -d '\r' || true)"
   echo "app-context tc: $(adb shell run-as com.elvan.netband /system/bin/su -c 'tc qdisc show dev wlan0 >/dev/null 2>&1; echo exit=$?' 2>&1 | tr -d '\r' || true)"
   echo "app-context iptables: $(adb shell run-as com.elvan.netband /system/bin/su -c 'iptables -L -n >/dev/null 2>&1; echo exit=$?' 2>&1 | tr -d '\r' || true)"
+  echo "app-context interactive su: $(printf 'echo SHELL_TEST\nid\nexit\n' | timeout 15 adb shell run-as com.elvan.netband /system/bin/su 2>&1 | tr -d '\r' || true)"
+  echo "app PATH: $(timeout 15 adb shell run-as com.elvan.netband /system/bin/sh -c 'echo \$PATH' 2>&1 | tr -d '\r' || true)"
 } | tee -a screenshots/root-diagnostics.txt
+
+adb logcat -d -t 4000 > screenshots/logcat-launch.txt 2>/dev/null || true
 
 failures=0
 pass() { echo "PASS: $*"; }
@@ -314,6 +318,18 @@ try:
 except Exception:
     sys.exit(0)
 
+parent = {child: node for node in root.iter('node') for child in node}
+
+
+def clickable(node):
+    current = node
+    while current is not None:
+        if current.get('clickable') == 'true':
+            return True
+        current = parent.get(current)
+    return False
+
+
 candidates = []
 for node in root.iter('node'):
     for attr in ('text', 'content-desc', 'hint'):
@@ -321,11 +337,12 @@ for node in root.iter('node'):
             match = re.search(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
             if match:
                 x1, y1, x2, y2 = map(int, match.groups())
-                candidates.append(((x1 + x2) // 2, (y1 + y2) // 2, y1))
+                candidates.append(((x1 + x2) // 2, (y1 + y2) // 2, y1, clickable(node)))
             break
 
 if candidates:
-    x, y, _ = max(candidates, key=lambda item: item[2])
+    actionable = [item for item in candidates if item[3]]
+    x, y, _, _ = max(actionable or candidates, key=lambda item: item[2])
     print(f'{x} {y}')
 PY
 }
@@ -428,6 +445,13 @@ wait_for_text() {
   return 1
 }
 
+scroll_top() {
+  adb shell input swipe 540 700 540 "$((screen_height - 300))" 250
+  sleep 1
+  adb shell input swipe 540 700 540 "$((screen_height - 300))" 250
+  sleep 1
+}
+
 assert_text() {
   local needle="$1"
   local description="${2:-$1}"
@@ -498,7 +522,7 @@ assert_text "10.0.2.15" "manual host added"
 capture netband-hosts
 
 echo "=== Host detail and limit/block/free/watch/analyze ==="
-tap_label "10.0.2.15" || fail "open host detail"
+tap_label "Open 10.0.2.15" || fail "open host detail"
 assert_text "Controls" "host detail opened"
 tap_label "Limit" || fail "open limit dialog"
 assert_text "Apply limit" "limit dialog opened"
@@ -545,10 +569,47 @@ capture netband-host-detail
 tap_label "Close" || adb shell input keyevent 4
 sleep 1
 
-echo "=== Free all ==="
+echo "=== Batch actions ==="
 tap_label "Free all" || fail "tap Free all"
 sleep 2
+scroll_top
 assert_text "Nothing to free" "Free all reports nothing to free"
+
+tap_label "Block all" || fail "open block-all dialog"
+assert_text "Block all hosts" "block-all dialog opened"
+tap_label "Block all hosts" || fail "confirm block-all"
+sleep 4
+scroll_top
+if [ "$ROOT_READY" = 1 ]; then
+  assert_text "Blocked all 1 host" "block all applied"
+  assert_text "Blocked" "host row shows blocked"
+else
+  assert_text "Root required" "block all refused without root"
+fi
+capture netband-batch-block
+
+tap_label "Free all" || fail "free all after block"
+sleep 3
+scroll_top
+assert_text "Freed 1 host" "free all after block"
+
+tap_label "Limit all" || fail "open limit-all dialog"
+assert_text "Apply to all" "limit-all dialog opened"
+tap_label "Apply to all" || fail "confirm limit-all"
+sleep 5
+scroll_top
+if [ "$ROOT_READY" = 1 ]; then
+  assert_text "Limited all 1 host" "limit all applied"
+  assert_text "Limited 512kbit" "host row shows limit"
+else
+  assert_text "Root required" "limit all refused without root"
+fi
+capture netband-batch-limit
+
+tap_label "Free all" || fail "free all after limit"
+sleep 3
+scroll_top
+assert_text "Freed 1 host" "free all after limit"
 
 echo "=== Monitor ==="
 tap_label "Monitor" || fail "open Monitor"

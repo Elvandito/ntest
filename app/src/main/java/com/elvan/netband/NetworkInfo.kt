@@ -22,7 +22,12 @@ object NetworkInfo {
         val lp: LinkProperties = cm.getLinkProperties(network) ?: return null
         val iface = lp.interfaceName ?: return null
 
-        val gw = lp.routes.firstOrNull { it.isDefaultRoute }?.gateway?.hostAddress ?: return null
+        val gateways = lp.routes
+            .filter { it.isDefaultRoute }
+            .mapNotNull { it.gateway?.hostAddress }
+        val gw = gateways.firstOrNull { !it.contains(":") }
+            ?: gateways.firstOrNull()
+            ?: return null
 
         val linkAddr = lp.linkAddresses.firstOrNull { addr ->
             val a = addr.address.hostAddress

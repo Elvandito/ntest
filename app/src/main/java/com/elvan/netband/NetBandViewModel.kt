@@ -247,6 +247,58 @@ class NetBandViewModel(app: Application) : AndroidViewModel(app) {
         setMessage(if (affected.isEmpty()) "Nothing to free" else "Freed ${affected.size} host${if (affected.size == 1) "" else "s"}")
     }
 
+    fun blockAll(direction: Direction) = viewModelScope.launch(Dispatchers.IO) {
+        val ni = _state.value.netInfo ?: return@launch
+        if (!_state.value.hasRoot) { setMessage("Root required to block hosts"); return@launch }
+        val targets = deviceMap.values.toList()
+        if (targets.isEmpty()) { setMessage("No hosts to block"); return@launch }
+        var applied = 0
+        targets.forEach { device ->
+            val ok = Limiter.block(ni.iface, device, direction)
+            if (ok) {
+                applied++
+                spoofer?.addTarget(device.ip, device.mac)
+            }
+        }
+        DeviceStore.save(getApplication(), deviceMap)
+        refreshDevices()
+        setMessage(
+            when {
+                applied == 0 -> "Could not block any hosts"
+                applied == targets.size -> "Blocked all ${targets.size} host${if (targets.size == 1) "" else "s"}"
+                else -> "Blocked $applied of ${targets.size} hosts"
+            }
+        )
+    }
+
+    fun limitAll(rate: String, direction: Direction) = viewModelScope.launch(Dispatchers.IO) {
+        val ni = _state.value.netInfo ?: return@launch
+        if (!_state.value.hasRoot) { setMessage("Root required to limit hosts"); return@launch }
+        if (!rate.matches(Regex("^[0-9]+[0-9]*(kbit|mbit|gbit|bit)$"))) {
+            setMessage("Invalid rate; e.g. 512kbit, 2mbit, 10mbit")
+            return@launch
+        }
+        val targets = deviceMap.values.toList()
+        if (targets.isEmpty()) { setMessage("No hosts to limit"); return@launch }
+        var applied = 0
+        targets.forEach { device ->
+            val ok = Limiter.limit(ni.iface, device, rate, direction)
+            if (ok) {
+                applied++
+                spoofer?.addTarget(device.ip, device.mac)
+            }
+        }
+        DeviceStore.save(getApplication(), deviceMap)
+        refreshDevices()
+        setMessage(
+            when {
+                applied == 0 -> "Could not limit any hosts"
+                applied == targets.size -> "Limited all ${targets.size} host${if (targets.size == 1) "" else "s"} to $rate"
+                else -> "Limited $applied of ${targets.size} hosts to $rate"
+            }
+        )
+    }
+
     fun toggleWatch(device: Device) = viewModelScope.launch(Dispatchers.IO) {
         device.watched = !device.watched
         DeviceStore.save(getApplication(), deviceMap)

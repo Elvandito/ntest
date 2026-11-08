@@ -52,6 +52,8 @@ fun HostsScreen(vm: NetBandViewModel) {
     var showAdd by remember { mutableStateOf(false) }
     var showLimit by remember { mutableStateOf<Device?>(null) }
     var showBlock by remember { mutableStateOf<Device?>(null) }
+    var showLimitAll by remember { mutableStateOf(false) }
+    var showBlockAll by remember { mutableStateOf(false) }
 
     val filtered = state.devices.filter { device ->
         val matchesQuery = query.isBlank() ||
@@ -167,10 +169,14 @@ fun HostsScreen(vm: NetBandViewModel) {
             }
         }
 
-        SectionHeader("Hosts · ${filtered.size}") {
-            TextButton(onClick = { vm.freeAll() }) {
-                Text("Free all", color = NetBandColors.Blue, fontSize = 14.sp, fontFamily = PublicSans)
-            }
+        SectionHeader("Hosts · ${filtered.size}")
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            DangerButton("Block all", { showBlockAll = true }, Modifier.weight(1f))
+            SecondaryButton("Limit all", { showLimitAll = true }, Modifier.weight(1f))
+            SecondaryButton("Free all", { vm.freeAll() }, Modifier.weight(1f))
         }
 
         if (filtered.isEmpty()) {
@@ -217,6 +223,18 @@ fun HostsScreen(vm: NetBandViewModel) {
             device = device,
             onDismiss = { showBlock = null },
             onBlock = { direction -> vm.block(device, direction); showBlock = null }
+        )
+    }
+    if (showLimitAll) {
+        BatchLimitDialog(
+            onDismiss = { showLimitAll = false },
+            onApply = { rate, direction -> vm.limitAll(rate, direction); showLimitAll = false }
+        )
+    }
+    if (showBlockAll) {
+        BatchBlockDialog(
+            onDismiss = { showBlockAll = false },
+            onBlock = { direction -> vm.blockAll(direction); showBlockAll = false }
         )
     }
 }
@@ -439,6 +457,62 @@ private fun BlockDialog(device: Device, onDismiss: () -> Unit, onBlock: (Directi
         confirmButton = {
             TextButton(onClick = { onBlock(direction) }, modifier = Modifier.height(44.dp)) {
                 Text("Block host", color = NetBandColors.Red, fontFamily = PublicSans, fontWeight = FontWeight.Medium)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.height(44.dp)) {
+                Text("Cancel", color = NetBandColors.Muted, fontFamily = PublicSans)
+            }
+        }
+    )
+}
+
+@Composable
+private fun BatchLimitDialog(onDismiss: () -> Unit, onApply: (String, Direction) -> Unit) {
+    var rate by remember { mutableStateOf("512kbit") }
+    var direction by remember { mutableStateOf(Direction.BOTH) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        containerColor = NetBandColors.Raised,
+        title = { Text("Limit all hosts", color = NetBandColors.Ink, fontFamily = PublicSans, fontWeight = FontWeight.SemiBold, fontSize = 21.sp) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("Apply the same rate to every saved host.", color = NetBandColors.Muted, fontFamily = PublicSans, fontSize = 14.sp)
+                DarkField(value = rate, onValueChange = { rate = it }, label = "Rate", placeholder = "512kbit · 2mbit")
+                DirectionSelector(direction, { direction = it })
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onApply(rate.trim(), direction) }, modifier = Modifier.height(44.dp)) {
+                Text("Apply to all", color = NetBandColors.Blue, fontFamily = PublicSans, fontWeight = FontWeight.Medium)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.height(44.dp)) {
+                Text("Cancel", color = NetBandColors.Muted, fontFamily = PublicSans)
+            }
+        }
+    )
+}
+
+@Composable
+private fun BatchBlockDialog(onDismiss: () -> Unit, onBlock: (Direction) -> Unit) {
+    var direction by remember { mutableStateOf(Direction.BOTH) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(28.dp),
+        containerColor = NetBandColors.Raised,
+        title = { Text("Block all hosts", color = NetBandColors.Ink, fontFamily = PublicSans, fontWeight = FontWeight.SemiBold, fontSize = 21.sp) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("Drop traffic for every saved host. This can cut off your own network access.", color = NetBandColors.Muted, fontFamily = PublicSans, fontSize = 14.sp)
+                DirectionSelector(direction, { direction = it })
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onBlock(direction) }, modifier = Modifier.height(44.dp)) {
+                Text("Block all hosts", color = NetBandColors.Red, fontFamily = PublicSans, fontWeight = FontWeight.Medium)
             }
         },
         dismissButton = {
