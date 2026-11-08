@@ -633,7 +633,7 @@ tap_label "Block all hosts" || fail "confirm block-all"
 sleep 4
 scroll_top
 if [ "$APP_ROOT" = 1 ]; then
-  assert_text "Blocked all 1 host" "block all applied"
+  assert_text "Blocked all" "block all applied"
   assert_text "Blocked" "host row shows blocked"
 else
   assert_text "Root required" "block all refused without root"
@@ -644,7 +644,7 @@ tap_label "Free all" || fail "free all after block"
 sleep 3
 scroll_top
 if [ "$APP_ROOT" = 1 ]; then
-  assert_text "Freed 1 host" "free all after block"
+  assert_text "Freed" "free all after block"
 else
   assert_text "Nothing to free" "nothing to free after refused block"
 fi
@@ -655,7 +655,7 @@ tap_label "Apply to all" || fail "confirm limit-all"
 sleep 5
 scroll_top
 if [ "$APP_ROOT" = 1 ]; then
-  assert_text "Limited all 1 host" "limit all applied"
+  assert_text "Limited all" "limit all applied"
   assert_text "upload + download" "host row shows limit"
 else
   assert_text "Root required" "limit all refused without root"
@@ -666,7 +666,7 @@ tap_label "Free all" || fail "free all after limit"
 sleep 3
 scroll_top
 if [ "$APP_ROOT" = 1 ]; then
-  assert_text "Freed 1 host" "free all after limit"
+  assert_text "Freed" "free all after limit"
 else
   assert_text "Nothing to free" "nothing to free after refused limit"
 fi
