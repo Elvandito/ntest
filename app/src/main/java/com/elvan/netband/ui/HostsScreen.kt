@@ -528,8 +528,13 @@ private fun BatchBlockDialog(onDismiss: () -> Unit, onBlock: (Direction) -> Unit
 private fun DirectionSelector(direction: Direction, onDirectionChange: (Direction) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         Direction.entries.forEach { option ->
+            val shortLabel = when (option) {
+                Direction.UP -> "Upload"
+                Direction.DOWN -> "Download"
+                Direction.BOTH -> "Both"
+            }
             FilterPill(
-                relativeDirection(option).replaceFirstChar { it.uppercase() },
+                shortLabel,
                 option == direction,
                 { onDirectionChange(option) },
                 Modifier.weight(1f)
