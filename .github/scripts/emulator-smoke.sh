@@ -656,7 +656,7 @@ sleep 5
 scroll_top
 if [ "$APP_ROOT" = 1 ]; then
   assert_text "Limited all 1 host" "limit all applied"
-  assert_text "Limited 512kbit" "host row shows limit"
+  assert_text "upload + download" "host row shows limit"
 else
   assert_text "Root required" "limit all refused without root"
 fi

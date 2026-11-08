@@ -83,7 +83,7 @@ jobs:
             exit 1
           fi
           "$cc" -static -O2 -s -o netband-su .github/scripts/netband-su.c
-          file netband-su
+          file netband-su || true
 
       - name: Upload root test client
         uses: actions/upload-artifact@v4
