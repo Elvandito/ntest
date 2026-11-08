@@ -7,14 +7,13 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Monitor
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +42,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.statusBarColor = android.graphics.Color.BLACK
+        window.navigationBarColor = android.graphics.Color.BLACK
         setContent {
             NetBandTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = NetBandColors.Ground) {
@@ -52,12 +54,21 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private data class Destination(val id: String, val label: String, val icon: ImageVector)
+
+private val destinations = listOf(
+    Destination("hosts", "Hosts", Icons.Filled.Devices),
+    Destination("monitor", "Monitor", Icons.Filled.Monitor),
+    Destination("watch", "Watch", Icons.Filled.Visibility),
+    Destination("settings", "Settings", Icons.Filled.Settings)
+)
+
 @Composable
 private fun NetBandApp(vm: NetBandViewModel, onQuit: () -> Unit) {
     var selectedTab by remember { mutableStateOf("hosts") }
 
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f)) {
+    Box(Modifier.fillMaxSize().background(NetBandColors.Ground)) {
+        Box(Modifier.fillMaxSize().padding(bottom = 92.dp)) {
             when (selectedTab) {
                 "hosts" -> HostsScreen(vm = vm)
                 "monitor" -> MonitorScreen(vm = vm)
@@ -68,42 +79,58 @@ private fun NetBandApp(vm: NetBandViewModel, onQuit: () -> Unit) {
 
         Box(
             Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(58.dp)
-                .background(NetBandColors.Surface)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .clip(RoundedCornerShape(32.dp))
+                .background(NetBandColors.Paper3)
+                .padding(6.dp)
         ) {
-            Box(Modifier.fillMaxWidth().height(1.dp).background(NetBandColors.Rule))
-            Row(Modifier.fillMaxSize()) {
-                DestinationIcon("hosts", selectedTab, Icons.Filled.Devices, "Hosts") { selectedTab = it }
-                DestinationIcon("monitor", selectedTab, Icons.Filled.Monitor, "Monitor") { selectedTab = it }
-                DestinationIcon("watch", selectedTab, Icons.Filled.Visibility, "Watch") { selectedTab = it }
-                DestinationIcon("settings", selectedTab, Icons.Filled.Settings, "Settings") { selectedTab = it }
+            Row(Modifier.fillMaxWidth().height(64.dp)) {
+                destinations.forEach { destination ->
+                    BottomNavItem(
+                        destination = destination,
+                        selected = destination.id == selectedTab,
+                        onSelect = { selectedTab = destination.id },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun RowScope.DestinationIcon(
-    id: String,
-    selectedTab: String,
-    icon: ImageVector,
-    label: String,
-    onSelect: (String) -> Unit
+private fun BottomNavItem(
+    destination: Destination,
+    selected: Boolean,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val selected = id == selectedTab
-    Column(
-        modifier = Modifier
-            .weight(1f)
+    Box(
+        modifier = modifier
             .fillMaxHeight()
-            .clickable { onSelect(id) },
-        horizontalAlignment = Alignment.CenterHorizontally
+            .clip(RoundedCornerShape(26.dp))
+            .background(if (selected) NetBandColors.BlueSoft else Color.Transparent)
+            .clickable(onClick = onSelect),
+        contentAlignment = Alignment.Center
     ) {
-        Box(Modifier.fillMaxWidth(0.5f).height(1.dp).background(if (selected) NetBandColors.Amber else Color.Transparent))
-        Column(Modifier.fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Icon(icon, contentDescription = label, tint = if (selected) NetBandColors.Text else NetBandColors.Muted, modifier = Modifier.size(20.dp))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                destination.icon,
+                contentDescription = destination.label,
+                tint = if (selected) NetBandColors.Blue else NetBandColors.Ink2,
+                modifier = Modifier.size(22.dp)
+            )
             Spacer(Modifier.height(3.dp))
-            Text(label, color = if (selected) NetBandColors.Text else NetBandColors.Muted, fontSize = 11.sp, fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal, fontFamily = PublicSans)
+            Text(
+                destination.label,
+                color = if (selected) NetBandColors.Blue else NetBandColors.Ink2,
+                fontSize = 11.sp,
+                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                fontFamily = PublicSans,
+                maxLines = 1
+            )
         }
     }
 }

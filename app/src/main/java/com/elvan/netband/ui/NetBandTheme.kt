@@ -1,44 +1,62 @@
 package com.elvan.netband.ui
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.elvan.netband.R
 
 object NetBandColors {
-    // Console · graphite, mapped to Android Color. Warm black is deliberately not used.
-    val Paper = Color(0xFF171A21)
-    val Paper2 = Color(0xFF1E222A)
-    val Paper3 = Color(0xFF11141A)
-    val Ink = Color(0xFFECEFF4)
-    val Ink2 = Color(0xFFC7CCD5)
-    val Muted = Color(0xFFA7ADB8)
-    val Rule = Color(0xFF303541)
-    val Rule2 = Color(0xFF464D5D)
-    val Amber = Color(0xFFE0A72E)
-    val AmberInk = Color(0xFF211A08)
-    val AmberSoft = Color(0xFF302A18)
-    val Cool = Color(0xFF6AA9DC)
-    val CoolSoft = Color(0xFF182B38)
-    val Ok = Color(0xFF58D09B)
-    val OkSoft = Color(0xFF182B24)
-    val Bad = Color(0xFFE06D6A)
-    val BadSoft = Color(0xFF341F22)
+    // Reference direction: true black, soft graphite cards, blue selection, green status.
+    val Black = Color(0xFF000000)
+    val Paper = Color(0xFF000000)
+    val Paper2 = Color(0xFF1C1C1E)
+    val Paper3 = Color(0xFF0B0B0C)
+    val Ink = Color(0xFFFFFFFF)
+    val Ink2 = Color(0xFFD1D1D6)
+    val Muted = Color(0xFFA1A1A6)
+    val Muted2 = Color(0xFF8E8E93)
+    val Rule = Color(0xFF2C2C2E)
+    val Rule2 = Color(0xFF3A3A3C)
+
+    val Blue = Color(0xFF5AA9FF)
+    val BlueFill = Color(0xFF0A84FF)
+    val BlueSoft = Color(0xFF173A5C)
+    val BlueInk = Color(0xFFFFFFFF)
+
+    val Green = Color(0xFF34C759)
+    val GreenSoft = Color(0xFF0E3A24)
+    val GreenInk = Color(0xFFBDF5D0)
+
+    val Amber = Color(0xFFFFB020)
+    val AmberSoft = Color(0xFF3A2A10)
+    val AmberInk = Color(0xFF1C1405)
+
+    val Red = Color(0xFFFF6B6B)
+    val RedSoft = Color(0xFF3A1B1E)
 
     // Compatibility aliases for the current UI.
     val Ground = Paper
-    val Surface = Paper3
+    val Surface = Paper2
     val Raised = Paper2
     val Border = Rule
     val Control = Rule2
     val Text = Ink
-    val Accent = Cool
-    val Positive = Ok
-    val Negative = Bad
+    val Accent = Blue
+    val Cool = Blue
+    val CoolSoft = BlueSoft
+    val Ok = Green
+    val OkSoft = GreenSoft
+    val Bad = Red
+    val BadSoft = RedSoft
+    val Positive = Green
+    val Negative = Red
     val Warning = Amber
 }
 
@@ -56,25 +74,35 @@ val IbmPlexMono = FontFamily(
 )
 
 private val NetBandScheme = darkColorScheme(
-    primary = NetBandColors.Amber,
-    onPrimary = NetBandColors.AmberInk,
-    primaryContainer = NetBandColors.AmberSoft,
-    onPrimaryContainer = NetBandColors.Amber,
+    primary = NetBandColors.Blue,
+    onPrimary = NetBandColors.BlueInk,
+    primaryContainer = NetBandColors.BlueSoft,
+    onPrimaryContainer = NetBandColors.Blue,
+    secondary = NetBandColors.Green,
+    onSecondary = NetBandColors.AmberInk,
     background = NetBandColors.Paper,
     onBackground = NetBandColors.Ink,
-    surface = NetBandColors.Paper3,
+    surface = NetBandColors.Paper2,
     onSurface = NetBandColors.Ink,
-    surfaceVariant = NetBandColors.Paper2,
+    surfaceVariant = NetBandColors.Rule,
     onSurfaceVariant = NetBandColors.Muted,
-    outline = NetBandColors.Rule,
-    error = NetBandColors.Bad,
-    onError = NetBandColors.AmberInk
+    outline = NetBandColors.Rule2,
+    error = NetBandColors.Red,
+    onError = NetBandColors.Ink
+)
+
+private val NetBandShapes = Shapes(
+    extraSmall = RoundedCornerShape(10.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(24.dp),
+    large = RoundedCornerShape(28.dp)
 )
 
 @Composable
 fun NetBandTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = NetBandScheme,
+        shapes = NetBandShapes,
         content = content
     )
 }
